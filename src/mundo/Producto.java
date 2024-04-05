@@ -9,6 +9,8 @@
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 package mundo;
+import java.sql.*;
+
 
 /**
  * Producto de la tienda.
@@ -134,7 +136,26 @@ public class Producto {
      * @return Cantidad de unidades vendidas.
      */
     public int darCantidadUnidadesVendidas() {
-        return cantidadUnidadesVendidas;
+        int unidadesVendidas = 0;
+        Connect connect = new Connect();
+        try {
+            Connection connection = connect.getConnection();
+            String query = "SELECT SUM(cantidad) FROM ventas WHERE idProducto = ?";
+            PreparedStatement ps = connection.prepareStatement(query);
+            ps.setInt(1, Tienda.obtenerIdProducto(this.nombre)); // Ahora llama al método estático
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                unidadesVendidas = rs.getInt(1); // Obtiene la suma de cantidad desde el resultado
+            }
+
+            rs.close();
+            ps.close();
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return unidadesVendidas;
     }
 
     /**
@@ -173,7 +194,20 @@ public class Producto {
      * Cambiar la nueva cantidad en bodega
      */
     public void cambiarCantidadBodega(int nuevaCantidadEnBodega) {
+
         this.cantidadBodega = nuevaCantidadEnBodega;
+        Connect connect = new Connect();
+        try {
+            Connection connection = connect.getConnection();
+            String query = "UPDATE producto SET bodega = ? WHERE nombre = ?";
+            PreparedStatement ps = connection.prepareStatement(query);
+            ps.setInt(1, nuevaCantidadEnBodega);
+            ps.setString(2, this.nombre);
+            ps.executeUpdate();
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -239,6 +273,7 @@ public class Producto {
      * @return Cantidad que realmente fue vendida, seg?n la disponibilidad en la bodega.
      */
     public int vender(int pCantidad) {
+
         int cantidadVendida = 0;
 
         if(pCantidad >= darCantidadBodega()){
@@ -248,7 +283,6 @@ public class Producto {
         }else{
             cantidadVendida = pCantidad;
             cambiarCantidadBodega(darCantidadBodega() - pCantidad);
-
         }
 
         cambiardarCantidadUnidadesVendidas(cantidadVendida);

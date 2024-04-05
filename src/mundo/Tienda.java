@@ -60,14 +60,13 @@ public class Tienda {
      */
     public Tienda() {
 
-        try {
-        String url = "jdbc:mysql://localhost:3306/tienda?serverTimezone=UTC";
-        String username = "root";
-        String password = "Sharito1977*";
+        Connect connect = new Connect();
 
-        Connection connection = DriverManager.getConnection(url, username, password);
+        try {
+            Connection  connection = connect.getConnection();
             Statement statement = connection.createStatement();
-            String query = "SELECT tipo.nombre, producto.nombre, producto.valor , bodega.cantidad, producto.minimo, producto.imagen FROM tienda.producto INNER JOIN tienda.tipo on producto.tipo = tipo.id INNER JOIN tienda.bodega on producto.id = bodega.idProducto";
+
+            String query = "SELECT tipo.nombre, producto.nombre, producto.valor , producto.bodega, producto.minimo, producto.imagen FROM tienda.producto INNER JOIN tienda.tipo on producto.tipo = tipo.id ";
 
             ResultSet resultSet = statement.executeQuery(query);
             int productoContador = 1;
@@ -260,15 +259,58 @@ public class Tienda {
      * @return Cantidad que fue efectivamente vendida.
      */
     public int venderProducto(String pNombreProducto, int pCantidad) {
+
+
         int cantidadVendida = 0;
 
         Producto prodVenta = darProducto(pNombreProducto); // Verificar que exista el producto en la tienda.
+
+
         if (prodVenta != null){
             cantidadVendida = prodVenta.vender(pCantidad);
             cambiarDineroEnCaja(prodVenta.calcularPrecioFinal() * cantidadVendida);
+
+            // Registrar venta en la base de datos
+            Connect connect = new Connect();
+            try {
+                Connection connection = connect.getConnection();
+                String query = "INSERT INTO ventas (idProducto, cantidad, totalVenta) VALUES (?, ?, ?)";
+                PreparedStatement ps = connection.prepareStatement(query);
+                ps.setInt(1, obtenerIdProducto(pNombreProducto));
+                ps.setInt(2, cantidadVendida);
+                ps.setDouble(3, prodVenta.calcularPrecioFinal() * cantidadVendida);
+                ps.executeUpdate();
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
         return cantidadVendida;
+
+    }
+
+    public static int obtenerIdProducto(String nombreProducto) {
+        int idProducto = -1;
+        Connect connect = new Connect();
+        try {
+            Connection connection = connect.getConnection();
+            String query = "SELECT id FROM producto WHERE nombre = ?";
+            PreparedStatement ps = connection.prepareStatement(query);
+            ps.setString(1, nombreProducto);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                idProducto = rs.getInt("id");
+            }
+
+            rs.close();
+            ps.close();
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return idProducto;
     }
 
     /**
