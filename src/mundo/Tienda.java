@@ -12,37 +12,21 @@ package mundo;
 
 import java.sql.*;
 
-/**
- * Tienda que maneja 4 productos.
- */
 public class Tienda {
     // -----------------------------------------------------------------
     // Atributos
     // -----------------------------------------------------------------
 
-    /**
-     * Producto 1 de la tienda.
-     */
+
     private Producto producto1;
 
-    /**
-     * Producto 2 de la tienda.
-     */
     private Producto producto2;
 
-    /**
-     * Producto 3 de la tienda.
-     */
     private Producto producto3;
 
-    /**
-     * Producto 4 de la tienda.
-     */
     private Producto producto4;
 
-    /**
-     * Dinero total recibido por las ventas.
-     */
+
     private double dineroEnCaja;
 
     // -----------------------------------------------------------------
@@ -155,6 +139,7 @@ public class Tienda {
      * @return Dinero en caja.
      */
     public double darDineroEnCaja() {
+        cambiarDineroEnCaja();
         return dineroEnCaja;
     }
 
@@ -167,13 +152,13 @@ public class Tienda {
     public Producto darProducto(String pNombre) {
         Producto buscado = null;
 
-        if(pNombre == producto1.darNombre()){
+        if(pNombre.equals(producto1.darNombre())){
             buscado = producto1;
-        } else if(pNombre == producto2.darNombre()){
+        } else if(pNombre.equals(producto2.darNombre())){
             buscado = producto2;
-        } else if(pNombre == producto3.darNombre()){
+        } else if(pNombre.equals(producto3.darNombre())){
             buscado = producto3;
-        } else if(pNombre == producto4.darNombre()){
+        } else if(pNombre.equals(producto4.darNombre())){
             buscado = producto4;
         }
         return buscado;
@@ -187,10 +172,33 @@ public class Tienda {
      */
     public double darPromedioVentas() {
 
-        int unidvend = producto1.darCantidadUnidadesVendidas() + producto2.darCantidadUnidadesVendidas() +  producto3.darCantidadUnidadesVendidas() + producto4.darCantidadUnidadesVendidas();
-        double respuesta = darDineroEnCaja()/unidvend;
+        Connect connect = new Connect();
+        double respuesta =0.0;
+
+        try {
+            Connection  connection = connect.getConnection();
+            Statement statement = connection.createStatement();
+
+            String query = "SELECT sum(totalVenta)/sum(cantidad) AS promedio FROM tienda.ventas ";
+
+            PreparedStatement ps = connection.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+
+            if(rs.next()){
+                respuesta = rs.getDouble("promedio");
+
+            }
+
+
+
+            // Cerrar la conexión
+            connection.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         return respuesta;
+
     }
 
     /**
@@ -268,7 +276,7 @@ public class Tienda {
 
         if (prodVenta != null){
             cantidadVendida = prodVenta.vender(pCantidad);
-            cambiarDineroEnCaja(prodVenta.calcularPrecioFinal() * cantidadVendida);
+            cambiarDineroEnCaja();
 
             // Registrar venta en la base de datos
             Connect connect = new Connect();
@@ -414,8 +422,31 @@ public class Tienda {
         }
 
     }
+    public void cambiarDineroEnCaja() {
+        Connect connect = new Connect();
+        double totalVentas =0.0;
 
-    public void cambiarDineroEnCaja(double dineroIngresa) {
-        this.dineroEnCaja = dineroEnCaja + dineroIngresa;
+        try {
+            Connection  connection = connect.getConnection();
+            Statement statement = connection.createStatement();
+
+            String query = "SELECT sum(totalVenta) AS totalVentas FROM tienda.ventas ";
+
+            PreparedStatement ps = connection.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+
+            if(rs.next()){
+                totalVentas = rs.getDouble("totalVentas");
+
+            }
+
+
+            // Cerrar la conexión
+            connection.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        this.dineroEnCaja =  totalVentas;
     }
 }
